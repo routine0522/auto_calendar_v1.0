@@ -134,21 +134,22 @@ button:hover{background:var(--bg2)}
 .cal-add-btn{font-size:10px;padding:1px 3px;border:0.5px dashed var(--bm);border-radius:3px;background:none;color:var(--t3);cursor:pointer;width:100%;text-align:left;margin-top:2px}
 .cal-add-btn:hover{background:var(--bg2)}
 /* 모바일 */
-@media(max-width:600px){
-  .sb{width:25vw;min-width:80px}
-  .sb-hd span{font-size:10px}
-  .rt-name{font-size:10px}
-  .rt-pill{font-size:9px;padding:1px 4px}
-  .add-rt-btn{font-size:10px}
-  .leg-i{font-size:9px}
-  .main{padding:6px 4px}
-  .top-bar select{font-size:11px;padding:2px 3px}
-  .cal td{height:60px;padding:2px}
-  .cal th{font-size:10px;padding:4px 2px}
+@media(max-width:768px){
+  html,body{width:100%;overflow-x:hidden}
+  .app{flex-direction:row;height:100dvh;width:100vw;overflow:hidden}
+  .sb{width:60vw !important;max-width:260px !important;min-width:unset !important;border-right:0.5px solid var(--bl);flex-shrink:0;overflow-y:auto}
+  .resizer{display:none}
+  .main{flex:1;padding:6px 6px;overflow-y:auto;overflow-x:hidden;min-width:0;min-height:0}
+  .top-bar{gap:3px}
+  .top-bar select{font-size:11px;padding:2px 3px;max-width:72px}
+  .cal td{height:58px;padding:2px}
+  .cal th{font-size:10px;padding:4px 1px;text-align:center}
   .task{font-size:9px;padding:1px 2px}
-  .dn{width:15px;height:15px;font-size:10px}
-  .tab{font-size:10px;padding:4px 8px}
-  button{font-size:10px;padding:3px 6px}
+  .task-time{font-size:8px}
+  .dn{width:16px;height:16px;font-size:10px}
+  .tab{font-size:11px;padding:5px 10px}
+  button{font-size:11px;padding:4px 7px}
+  #sbToggleBtn{font-size:10px;padding:4px 7px}
 }
 /* 인쇄 */
 .print-header{display:none}
@@ -171,7 +172,7 @@ button:hover{background:var(--bg2)}
 
 <div class="sb" id="sb">
   <div class="sb-hd" id="sbHd">
-    <span><svg class="ic" style="font-size:13px" viewBox="0 0 24 24"><path d="M3 5h2M3 10h2M3 15h2M7 5h14M7 10h14M7 15h9"/><circle cx="19" cy="17" r="2"/><path d="M21 19l-1.5-1.5"/></svg> 루틴 목록</span>
+    <span style="flex:1;text-align:center"> 루틴 목록</span>
     <svg class="ic" id="sbIcon" style="font-size:13px;color:var(--t2);transition:transform 0.2s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
   </div>
   <div class="sb-body" id="sbBody">
@@ -188,16 +189,16 @@ button:hover{background:var(--bg2)}
 
 <div class="main">
   <div class="top-bar">
+    <button id="sbToggleBtn" title="목록 열기/닫기" style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:4px 10px;border:none;border-radius:var(--r);background:#444;color:#fff;cursor:pointer">
+      <span id="sbToggleLbl">목록 열기</span>
+    </button>
     <button id="prevBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
     <select id="yearSel"></select>
     <select id="monthSel"></select>
     <div style="flex:1"></div>
     <button id="todayBtn">오늘</button>
+    <button id="langBtn" style="font-size:10px;font-weight:600;padding:4px 8px;border:0.5px solid var(--bm);border-radius:var(--r);background:var(--bg2);color:var(--t2);cursor:pointer;letter-spacing:0.3px">EN</button>
     <button id="nextBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-  </div>
-  <div class="tabs">
-    <button class="tab active" id="tabView">보기</button>
-    <button class="tab" id="tabEdit">편집</button>
   </div>
   <div class="print-header" id="printHeader"></div>
   <div id="calOut"></div>
@@ -206,8 +207,74 @@ button:hover{background:var(--bg2)}
 </div>
 <script>
 const MONTHS_KO = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+const MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAYS_KO = ["일","월","화","수","목","금","토"];
-const FREQ_TYPES = ["매일","주 N회","월 N회","연 N회","특정 날짜"];
+const DAYS_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const FREQ_TYPES_KO = ["매일","주 N회","월 N회","연 N회","특정 날짜"];
+const FREQ_TYPES_EN = ["Daily","Weekly","Monthly","Yearly","Specific date"];
+const FREQ_TYPES = FREQ_TYPES_KO;
+
+// ── 언어 ──
+let lang = "ko";
+const LANG = {
+  ko: {
+    routineList:"루틴 목록", addRoutine:"루틴 추가", todo:"TO DO", wish:"WISH",
+    view:"보기", edit:"편집", today:"오늘",
+    name:"루틴 이름", namePh:"예: 건강검진 예약", cat:"구분",
+    freq:"주기", freqDesc:{
+      "매일":"선택한 월마다 매일 표시돼요",
+      "주 N회":"선택한 월 안에서 매주 N회 표시돼요",
+      "월 N회":"선택한 월마다 N회 표시돼요",
+      "연 N회":"1년에 N회 — 월 선택 없이 자동 분산돼요",
+      "특정 날짜":"지정한 날짜에만 표시돼요 — 월/일 직접 입력"
+    },
+    freqTypes:FREQ_TYPES_KO,
+    execMonth:"실행 월", everyMonth:"매월",
+    alarm:"시간 & 알림", alarmOpt:"(선택)", alarmOpen:"시간 및 알림 설정하기", alarmClose:"시간 및 알림 설정 접기",
+    execTime:"실행 시간", alarmLbl:"알림", alarmMemo:"알림 메모 (선택)", alarmMemoPh:"예: 약 먹기 잊지 말기",
+    alarmOpts:["없음","정시","5분 전","10분 전","30분 전"],
+    del:"삭제", cancel:"취소", save:"저장",
+    weeksN:"주 몇 회", daysOfWeek:"요일 선택 (선택)", perWeek:"회/주",
+    monthsN:"월 몇 회 표시할까요?", perMonth:"회/월", monthNote:"※ 선택한 월의 1일에 표시됩니다",
+    yearN:"1년에 몇 회 하시나요?", perYear:"회/년", yearNote:"※ 캘린더에는 참고용으로 1월 1일에 표시됩니다",
+    dateInput:"날짜를 지정해주세요", monthUnit:"월", dayUnit:"일",
+    memoLabel:"📝 메모", monthGoal:"📌 %월 목표", yearGoal:"🎯 올해 목표",
+    memoPh:"자유롭게 메모하세요...", monthGoalPh:"이번 달 집중할 목표를 적어보세요...", yearGoalPh:"올해 이루고 싶은 목표를 적어보세요...",
+    emptyList:"루틴이 없어요",
+  },
+  en: {
+    routineList:"Routine List", addRoutine:"Add Routine", todo:"TO DO", wish:"WISH",
+    view:"View", edit:"Edit", today:"Today",
+    name:"Routine Name", namePh:"e.g. Annual checkup", cat:"Category",
+    freq:"Frequency", freqDesc:{
+      "매일":"Shows every day of the selected months",
+      "주 N회":"Shows N times per week in selected months",
+      "월 N회":"Shows N times per month in selected months",
+      "연 N회":"N times a year — auto distributed, no month needed",
+      "특정 날짜":"Shows only on the specified date"
+    },
+    freqTypes:FREQ_TYPES_EN,
+    execMonth:"Active Months", everyMonth:"Every Month",
+    alarm:"Time & Alarm", alarmOpt:"(optional)", alarmOpen:"Set time & alarm", alarmClose:"Hide time & alarm",
+    execTime:"Time", alarmLbl:"Alarm", alarmMemo:"Alarm memo (optional)", alarmMemoPh:"e.g. Don't forget your meds",
+    alarmOpts:["None","On time","5 min before","10 min before","30 min before"],
+    del:"Delete", cancel:"Cancel", save:"Save",
+    weeksN:"Times per week", daysOfWeek:"Day of week (optional)", perWeek:"x/wk",
+    monthsN:"Times per month?", perMonth:"x/mo", monthNote:"※ Shows on the 1st of selected months",
+    yearN:"How many times per year?", perYear:"x/yr", yearNote:"※ Shows on Jan 1st for reference",
+    dateInput:"Specify a date", monthUnit:"Mo", dayUnit:"Day",
+    memoLabel:"📝 Memo", monthGoal:"📌 %'s Goals", yearGoal:"🎯 Year Goals",
+    memoPh:"Free memo...", monthGoalPh:"Goals for this month...", yearGoalPh:"Goals for this year...",
+    emptyList:"No routines yet",
+  }
+};
+function tr(key) { return LANG[lang][key] || key; }
+function tFreqType(ko) {
+  if (lang==="en") { var i=FREQ_TYPES_KO.indexOf(ko); return i>=0?FREQ_TYPES_EN[i]:ko; }
+  return ko;
+}
+function getMonthLabel(m) { return lang==="en" ? MONTHS_EN[m-1] : m+"월"; }
+function getDays() { return lang==="en" ? DAYS_EN : DAYS_KO; }
 const TODAY = new Date();
 const BASE_YEAR = TODAY.getFullYear();
 const MIN_YEAR = BASE_YEAR - 5;
@@ -237,8 +304,6 @@ function loadMemo(yr, mo) {
 loadTodos();
 let curYear = BASE_YEAR;
 let curMonth = TODAY.getMonth() + 1;
-let curTab = "view";
-let sbOpen = true;
 let editingIdx = null;
 let curCat = "todo"; // "todo" | "wish"
 
@@ -261,13 +326,157 @@ function taskClass(t) {
 }
 function pillLabel(t) {
   const f = t.freqType || "", n = t.freqN || 1;
-  if (f==="매일") return "매일";
-  if (f==="주 N회") { const ds=(t.days||[]).join("·"); return ds?"주 "+n+"회 "+ds:"주 "+n+"회"; }
-  if (f==="월 N회") return "월 "+n+"회";
-  if (f==="연 N회") return "연 "+n+"회";
-  if (f==="특정 날짜") return (t.specificMonth||"?")+"월 "+(t.specificDay||"?")+"일";
+  const lbl = LANG[lang];
+  if (f==="매일") return lbl.freqTypes[0];
+  if (f==="주 N회") { const ds=(t.days||[]).join("·"); return ds?lbl.freqTypes[1].replace("N",n)+" "+ds:lbl.freqTypes[1].replace("N",n); }
+  if (f==="월 N회") return lbl.freqTypes[2].replace("N",n);
+  if (f==="연 N회") return lbl.freqTypes[3].replace("N",n);
+  if (f==="특정 날짜") return lang==="en"
+    ? (MONTHS_EN[(t.specificMonth||1)-1]||"?")+" "+(t.specificDay||"?")
+    : (t.specificMonth||"?")+"월 "+(t.specificDay||"?")+"일";
   return f;
 }
+
+// ── 날짜 클릭 팝업 (기존 항목 편집 + 추가) ──
+function showDateAddPopup(day) {
+  const old = document.getElementById("dateAddModal"); if(old) old.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "dateAddModal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:flex;align-items:center;justify-content:center";
+
+  const box = document.createElement("div");
+  box.style.cssText = "background:var(--bg);border-radius:12px;width:92%;max-width:360px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.2)";
+
+  // 헤더
+  const hd = document.createElement("div");
+  hd.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--bl);flex-shrink:0;background:var(--bg);border-radius:12px 12px 0 0";
+  const hdTitle = document.createElement("span");
+  hdTitle.style.cssText = "font-size:13px;font-weight:600;color:var(--t1)";
+  hdTitle.textContent = lang==="en"
+    ? MONTHS_EN[curMonth-1]+" "+day+", "+curYear
+    : curYear+"년 "+curMonth+"월 "+day+"일";
+  const closeBtn = document.createElement("button");
+  closeBtn.style.cssText = "border:none;background:none;font-size:18px;color:var(--t3);cursor:pointer;padding:0 4px;line-height:1";
+  closeBtn.textContent = "✕";
+  closeBtn.addEventListener("click", function(){ overlay.remove(); });
+  hd.appendChild(hdTitle); hd.appendChild(closeBtn);
+  box.appendChild(hd);
+
+  // 스크롤 영역
+  const scrollArea = document.createElement("div");
+  scrollArea.style.cssText = "overflow-y:auto;flex:1";
+
+  // 기존 항목 목록
+  function buildExistingItems() {
+    const existing = document.getElementById("dateModal_existing");
+    if(existing) existing.remove();
+    const tasks = getTasksForDate(curYear, curMonth, day);
+    if(tasks.length===0) return;
+    const sec = document.createElement("div");
+    sec.id = "dateModal_existing";
+    sec.style.cssText = "padding:10px 14px 4px";
+    const secLbl = document.createElement("div");
+    secLbl.style.cssText = "font-size:10px;font-weight:600;color:var(--t2);margin-bottom:8px;letter-spacing:0.3px";
+    secLbl.textContent = lang==="en" ? "ROUTINES ON THIS DAY" : "이 날의 루틴";
+    sec.appendChild(secLbl);
+    tasks.forEach(function(item){
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:var(--bg2);margin-bottom:6px";
+      // 색상 뱃지
+      const badge = document.createElement("span");
+      badge.style.cssText = "width:4px;height:28px;border-radius:2px;flex-shrink:0;background:"+(item.t.cat==="wish"?"#993556":"#185FA5");
+      // 이름
+      const nameEl = document.createElement("span");
+      nameEl.style.cssText = "flex:1;font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+      nameEl.textContent = (item.t.timeVal ? item.t.timeVal+" " : "") + item.t.name;
+      // 수정 버튼
+      const editBtn = document.createElement("button");
+      editBtn.style.cssText = "border:0.5px solid var(--bm);background:var(--bg);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--t2);cursor:pointer;flex-shrink:0";
+      editBtn.textContent = lang==="en" ? "Edit" : "수정";
+      editBtn.addEventListener("click", function(){
+        overlay.remove();
+        editingIdx = item.idx;
+        buildList();
+        if(!sbOpen) toggleSidebar();
+        document.getElementById("sbBody").scrollTop = 0;
+      });
+      // 삭제 버튼
+      const delBtn = document.createElement("button");
+      delBtn.style.cssText = "border:0.5px solid #f09595;background:var(--bg);border-radius:6px;padding:3px 8px;font-size:10px;color:#a32d2d;cursor:pointer;flex-shrink:0";
+      delBtn.textContent = lang==="en" ? "Del" : "삭제";
+      delBtn.addEventListener("click", function(){
+        if(!confirm((lang==="en"?"Delete ":"삭제할까요? ")+"\""+(item.t.name||"")+"\"?")) return;
+        todos.splice(item.idx, 1);
+        saveTodos(); buildList(); renderCalendar();
+        buildExistingItems();
+      });
+      row.appendChild(badge); row.appendChild(nameEl); row.appendChild(editBtn);
+      sec.appendChild(row);
+    });
+    scrollArea.insertBefore(sec, scrollArea.firstChild);
+  }
+
+  // 추가 폼
+  const addSec = document.createElement("div");
+  addSec.style.cssText = "border-top:0.5px solid var(--bl)";
+  const addHd = document.createElement("div");
+  addHd.style.cssText = "padding:10px 14px 6px;font-size:10px;font-weight:600;color:var(--t2);letter-spacing:0.3px";
+  addHd.textContent = lang==="en" ? "ADD ROUTINE" : "루틴 추가";
+  addSec.appendChild(addHd);
+
+  const initData = {name:"",freqType:"특정 날짜",freqN:1,months:[],days:[],specificMonth:curMonth,specificDay:day,cat:curCat};
+  const panel = buildPanel(-1, initData);
+  panel.querySelectorAll(".panel-section").forEach(function(sec){
+    if(sec.classList.contains("sec-freq")||sec.classList.contains("sec-month")) sec.style.display="none";
+  });
+
+  // 버튼 조정: 취소 제거, 저장 → 확인으로 변경 + 팝업 닫기
+  const btns = panel.querySelector(".panel-btns");
+  const cancelBtn = btns.querySelectorAll("button")[0];
+  const saveBtn = btns.querySelector(".pbtn.save");
+  cancelBtn.remove();
+  saveBtn.textContent = lang==="en" ? "Confirm" : "확인";
+  saveBtn.addEventListener("click", function(){
+    setTimeout(function(){ overlay.remove(); }, 60);
+  });
+
+  panel.style.cssText = "border:none;border-radius:0;margin:0";
+  addSec.appendChild(panel);
+  scrollArea.appendChild(addSec);
+
+  box.appendChild(scrollArea);
+  overlay.appendChild(box);
+  overlay.addEventListener("click", function(e){ if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  buildExistingItems();
+}
+
+// ── 언어 전환 ──
+function applyLang() {
+  // 사이드바
+  document.querySelector("#sbHd span").textContent = " "+tr("routineList");
+  document.getElementById("addRtBtn").childNodes[1].textContent = " "+tr("addRoutine");
+  document.getElementById("tabTodo").textContent = tr("todo");
+  document.getElementById("tabWish").textContent = tr("wish");
+  // 목록 토글 버튼
+  const lbl = document.getElementById("sbToggleLbl");
+  lbl.textContent = sbOpen
+    ? (lang==="en" ? "Close List" : "목록 닫기")
+    : (lang==="en" ? "Open List" : "목록 열기");
+  // 오늘 버튼
+  document.getElementById("todayBtn").textContent = tr("today");
+  // 연/월 셀렉트 재빌드
+  buildYearSel(); buildMonthSel();
+  // 캘린더 & 목록 재렌더
+  buildList(); renderCalendar();
+}
+
+document.getElementById("langBtn").addEventListener("click", function(){
+  lang = lang==="ko" ? "en" : "ko";
+  this.textContent = lang==="ko" ? "EN" : "KO";
+  applyLang();
+});
 
 // ── TO DO / WISH 탭 (추가 시 구분용) ──
 function setTab(cat) {
@@ -283,11 +492,33 @@ function setTab(cat) {
 document.getElementById("tabTodo").addEventListener("click", function(){ setTab("todo"); });
 document.getElementById("tabWish").addEventListener("click", function(){ setTab("wish"); });
 
-// ── 사이드바 접기 ──
-document.getElementById("sbHd").addEventListener("click", function() {
+// ── 사이드바 열기/닫기 ──
+let sbOpen = false; // 디폴트: 닫힘
+document.getElementById("sb").style.display = "none";
+document.getElementById("resizer").style.display = "none";
+
+function toggleSidebar() {
   sbOpen = !sbOpen;
-  document.getElementById("sbBody").className = "sb-body"+(sbOpen?"":" hidden");
-  document.getElementById("sbIcon").style.transform = sbOpen?"":"rotate(-90deg)";
+  const sb = document.getElementById("sb");
+  const resizer = document.getElementById("resizer");
+  const isMobile = window.innerWidth <= 768;
+  sb.style.display = sbOpen ? "" : "none";
+  resizer.style.display = (sbOpen && !isMobile) ? "" : "none";
+  const lbl = document.getElementById("sbToggleLbl");
+  lbl.textContent = sbOpen
+    ? (lang==="en" ? "Close List" : "목록 닫기")
+    : (lang==="en" ? "Open List" : "목록 열기");
+  const btn = document.getElementById("sbToggleBtn");
+  btn.style.background = sbOpen ? "#222" : "#444";
+  btn.style.color = "#fff";
+  btn.style.borderColor = "transparent";
+}
+
+document.getElementById("sbToggleBtn").addEventListener("click", toggleSidebar);
+
+// 기존 사이드바 헤더 클릭은 닫기만
+document.getElementById("sbHd").addEventListener("click", function() {
+  toggleSidebar();
 });
 
 // ── 루틴 목록 렌더 ──
@@ -297,7 +528,7 @@ function buildList() {
   if (todos.length===0) {
     const empty = document.createElement("div");
     empty.style.cssText="text-align:center;padding:20px 8px;font-size:11px;color:var(--t3)";
-    empty.textContent = "루틴이 없어요";
+    empty.textContent = tr("emptyList");
     container.appendChild(empty);
   }
   todos.forEach(function(t) {
@@ -465,9 +696,9 @@ function applyNewOrder(container) {
 }
 
 // ── 편집 패널 ──
-function buildPanel(idx) {
+function buildPanel(idx, initData) {
   const t = idx===-1
-    ? {name:"",freqType:"매일",freqN:1,months:[],days:[],specificMonth:curMonth,specificDay:1,cat:curCat}
+    ? (initData || {name:"",freqType:"매일",freqN:1,months:[],days:[],specificMonth:curMonth,specificDay:1,cat:curCat})
     : JSON.parse(JSON.stringify(todos[idx]));
   const panel = document.createElement("div");
   panel.className = "rt-panel";
@@ -483,13 +714,13 @@ function buildPanel(idx) {
   }
 
   // 섹션1: 이름
-  const secName = makeSection("sec-name","✏️","루틴 이름");
-  const nameInp = document.createElement("input"); nameInp.className="panel-inp"; nameInp.value=t.name; nameInp.placeholder="예: 건강검진 예약";
+  const secName = makeSection("sec-name","✏️",tr("name"));
+  const nameInp = document.createElement("input"); nameInp.className="panel-inp"; nameInp.value=t.name; nameInp.placeholder=tr("namePh");
   secName.appendChild(nameInp);
   panel.appendChild(secName);
 
   // 섹션2: 구분
-  const secCat = makeSection("sec-cat","🏷","구분");
+  const secCat = makeSection("sec-cat","🏷",tr("cat"));
   const catSeg = document.createElement("div"); catSeg.className="seg";
   [{val:"todo",label:"TO DO"},{val:"wish",label:"WISH"}].forEach(function(opt){
     const btn=document.createElement("button");
@@ -506,22 +737,23 @@ function buildPanel(idx) {
   panel.appendChild(secCat);
 
   // 섹션3: 주기
-  const secFreq = makeSection("sec-freq","🔄","주기");
+  const secFreq = makeSection("sec-freq","🔄",tr("freq"));
   const seg = document.createElement("div"); seg.className="seg";
   const freqDesc = document.createElement("div");
   freqDesc.style.cssText="font-size:10px;color:var(--t3);margin-top:6px;min-height:14px";
   const subArea = document.createElement("div");
-  var FREQ_DESCS = {"매일":"선택한 월마다 매일 표시돼요","주 N회":"선택한 월 안에서 매주 N회 표시돼요","월 N회":"선택한 월마다 N회 표시돼요","연 N회":"1년에 N회 — 월 선택 없이 자동 분산돼요","특정 날짜":"지정한 날짜에만 표시돼요 — 월/일 직접 입력"};
-  FREQ_TYPES.forEach(function(ft){
+  var FREQ_DESCS = LANG[lang].freqDesc;
+  LANG[lang].freqTypes.forEach(function(ft, fti){
+    var ftKo = FREQ_TYPES_KO[fti];
     const btn=document.createElement("button");
-    btn.className="seg-btn"+(t.freqType===ft?" on":"");
+    btn.className="seg-btn"+(t.freqType===ftKo?" on":"");
     btn.textContent=ft;
     btn.addEventListener("click",function(){
-      t.freqType=ft; if(!t.freqN) t.freqN=1;
-      if(ft==="연 N회"||ft==="특정 날짜") t.months=[];
+      t.freqType=ftKo; if(!t.freqN) t.freqN=1;
+      if(ftKo==="연 N회"||ftKo==="특정 날짜") t.months=[];
       seg.querySelectorAll(".seg-btn").forEach(function(b){b.classList.remove("on");});
       this.classList.add("on");
-      freqDesc.textContent=FREQ_DESCS[ft]||"";
+      freqDesc.textContent=FREQ_DESCS[ftKo]||"";
       renderMonthField(); renderSubArea();
     });
     seg.appendChild(btn);
@@ -535,9 +767,9 @@ function buildPanel(idx) {
     const f=t.freqType; if(f==="매일") return;
     const sp=document.createElement("div"); sp.className="sub-panel"; sp.style.marginTop="8px";
     if(f==="주 N회"){
-      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent="주 몇 회"; sp.appendChild(sl);
-      sp.appendChild(makeNumRow(t,"freqN",1,7,"회/주"));
-      const dl=document.createElement("div"); dl.className="sub-label"; dl.style.marginTop="8px"; dl.textContent="요일 선택 (선택)"; sp.appendChild(dl);
+      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("weeksN"); sp.appendChild(sl);
+      sp.appendChild(makeNumRow(t,"freqN",1,7,tr("perWeek")));
+      const dl=document.createElement("div"); dl.className="sub-label"; dl.style.marginTop="8px"; dl.textContent=tr("daysOfWeek"); sp.appendChild(dl);
       const dc=document.createElement("div"); dc.className="day-chips";
       ["일","월","화","수","목","금","토"].forEach(function(d){
         const c=document.createElement("span");
@@ -547,22 +779,22 @@ function buildPanel(idx) {
       });
       sp.appendChild(dc);
     } else if(f==="월 N회"){
-      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent="월 몇 회 표시할까요?"; sp.appendChild(sl);
-      sp.appendChild(makeNumRow(t,"freqN",1,31,"회/월"));
-      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px"; note.textContent="※ 선택한 월의 1일에 표시됩니다"; sp.appendChild(note);
+      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("monthsN"); sp.appendChild(sl);
+      sp.appendChild(makeNumRow(t,"freqN",1,31,tr("perMonth")));
+      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px"; note.textContent=tr("monthNote"); sp.appendChild(note);
     } else if(f==="연 N회"){
-      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent="1년에 몇 회 하시나요?"; sp.appendChild(sl);
-      sp.appendChild(makeNumRow(t,"freqN",1,52,"회/년"));
-      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px"; note.textContent="※ 캘린더에는 참고용으로 1월 1일에 표시됩니다"; sp.appendChild(note);
+      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("yearN"); sp.appendChild(sl);
+      sp.appendChild(makeNumRow(t,"freqN",1,52,tr("perYear")));
+      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px"; note.textContent=tr("yearNote"); sp.appendChild(note);
     } else if(f==="특정 날짜"){
-      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent="날짜를 지정해주세요"; sp.appendChild(sl);
+      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("dateInput"); sp.appendChild(sl);
       const dr=document.createElement("div"); dr.className="date-row";
       const mi=document.createElement("input"); mi.className="date-inp"; mi.type="number"; mi.min=1; mi.max=12; mi.value=t.specificMonth||curMonth; mi.placeholder="월";
       mi.addEventListener("input",function(){t.specificMonth=parseInt(this.value)||1;});
-      const sep=document.createElement("span"); sep.style.cssText="font-size:11px;color:var(--t2)"; sep.textContent="월";
+      const sep=document.createElement("span"); sep.style.cssText="font-size:11px;color:var(--t2)"; sep.textContent=tr("monthUnit");
       const di=document.createElement("input"); di.className="date-inp"; di.type="number"; di.min=1; di.max=31; di.value=t.specificDay||1; di.placeholder="일";
       di.addEventListener("input",function(){t.specificDay=parseInt(this.value)||1;});
-      const sep2=document.createElement("span"); sep2.style.cssText="font-size:11px;color:var(--t2)"; sep2.textContent="일";
+      const sep2=document.createElement("span"); sep2.style.cssText="font-size:11px;color:var(--t2)"; sep2.textContent=tr("dayUnit");
       dr.appendChild(mi); dr.appendChild(sep); dr.appendChild(di); dr.appendChild(sep2); sp.appendChild(dr);
     }
     subArea.appendChild(sp);
@@ -570,15 +802,17 @@ function buildPanel(idx) {
   renderSubArea();
 
   // 섹션4: 실행 월
-  const secMonth = makeSection("sec-month","📅","실행 월");
+  const secMonth = makeSection("sec-month","📅",tr("execMonth"));
   const chipWrap = document.createElement("div"); chipWrap.className="chip-wrap";
   const everyChip = document.createElement("span");
-  everyChip.className="mchip"+((t.months||[]).length===0?" every":""); everyChip.textContent="매월";
+  everyChip.className="mchip"+((t.months||[]).length===0?" every":""); everyChip.textContent=tr("everyMonth");
   everyChip.addEventListener("click",function(){ t.months=[]; refreshMonthChips(); });
   chipWrap.appendChild(everyChip);
   for(let m=1;m<=12;m++){
     const chip=document.createElement("span");
-    chip.className="mchip"+((t.months||[]).includes(m)?" on":""); chip.textContent=m+"월"; chip.dataset.m=m;
+    chip.className="mchip"+((t.months||[]).includes(m)?" on":"");
+    chip.textContent = lang==="en" ? MONTHS_EN[m-1] : m+"월";
+    chip.dataset.m=m;
     chip.addEventListener("click",function(){
       const mv=parseInt(this.dataset.m); if(!t.months) t.months=[];
       const i2=t.months.indexOf(mv); if(i2>=0) t.months.splice(i2,1); else t.months.push(mv);
@@ -598,23 +832,23 @@ function buildPanel(idx) {
   panel.appendChild(secMonth);
 
   // 섹션5: 시간 & 알림
-  const secAlarm = makeSection("sec-alarm","⏰","시간 & 알림");
-  const alarmOptLbl=document.createElement("span"); alarmOptLbl.style.cssText="font-size:9px;color:var(--t3);margin-left:4px"; alarmOptLbl.textContent="(선택)";
+  const secAlarm = makeSection("sec-alarm","⏰",tr("alarm"));
+  const alarmOptLbl=document.createElement("span"); alarmOptLbl.style.cssText="font-size:9px;color:var(--t3);margin-left:4px"; alarmOptLbl.textContent=tr("alarmOpt");
   secAlarm.querySelector(".panel-section-hd").appendChild(alarmOptLbl);
   const alarmBody=document.createElement("div"); alarmBody.style.cssText="display:none;margin-top:8px";
   const alarmToggleRow=document.createElement("div"); alarmToggleRow.style.cssText="cursor:pointer;font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px;user-select:none";
   const alarmChevron=document.createElement("span"); alarmChevron.style.cssText="transition:transform 0.2s;display:inline-block"; alarmChevron.textContent="▸";
-  const alarmToggleTxt=document.createElement("span"); alarmToggleTxt.textContent="시간 및 알림 설정하기";
+  const alarmToggleTxt=document.createElement("span"); alarmToggleTxt.textContent=tr("alarmOpen");
   alarmToggleRow.appendChild(alarmChevron); alarmToggleRow.appendChild(alarmToggleTxt);
   const timeField=document.createElement("div"); timeField.style.cssText="margin-bottom:8px";
-  const timeLbl=document.createElement("span"); timeLbl.className="panel-label"; timeLbl.textContent="실행 시간";
+  const timeLbl=document.createElement("span"); timeLbl.className="panel-label"; timeLbl.textContent=tr("execTime");
   const timeInp=document.createElement("input"); timeInp.type="time"; timeInp.className="panel-inp"; timeInp.style.cssText="width:auto;min-width:110px"; timeInp.value=t.timeVal||"";
   timeInp.addEventListener("change",function(){ t.timeVal=this.value; });
   timeField.appendChild(timeLbl); timeField.appendChild(timeInp); alarmBody.appendChild(timeField);
   const alarmField=document.createElement("div");
-  const alarmLbl=document.createElement("span"); alarmLbl.className="panel-label"; alarmLbl.textContent="알림"; alarmField.appendChild(alarmLbl);
+  const alarmLbl=document.createElement("span"); alarmLbl.className="panel-label"; alarmLbl.textContent=tr("alarmLbl"); alarmField.appendChild(alarmLbl);
   const alarmSeg=document.createElement("div"); alarmSeg.className="seg";
-  [{val:"none",label:"없음"},{val:"ontime",label:"정시"},{val:"5min",label:"5분 전"},{val:"10min",label:"10분 전"},{val:"30min",label:"30분 전"}].forEach(function(opt){
+  LANG[lang].alarmOpts.map(function(lb,i){return {val:["none","ontime","5min","10min","30min"][i],label:lb};}).forEach(function(opt){
     const btn=document.createElement("button"); btn.className="seg-btn"+((t.alarmVal||"none")===opt.val?" on":""); btn.textContent=opt.label;
     btn.addEventListener("click",function(){
       t.alarmVal=opt.val; alarmSeg.querySelectorAll(".seg-btn").forEach(function(b){b.classList.remove("on");}); this.classList.add("on");
@@ -623,11 +857,11 @@ function buildPanel(idx) {
     alarmSeg.appendChild(btn);
   });
   alarmField.appendChild(alarmSeg);
-  const memoLbl=document.createElement("span"); memoLbl.className="panel-label"; memoLbl.style.cssText="margin-top:6px;display:block"; memoLbl.textContent="알림 메모 (선택)";
-  const memoInp=document.createElement("input"); memoInp.className="panel-inp"; memoInp.placeholder="예: 약 먹기 잊지 말기"; memoInp.value=t.alarmMemo||"";
+  const memoLbl=document.createElement("span"); memoLbl.className="panel-label"; memoLbl.style.cssText="margin-top:6px;display:block"; memoLbl.textContent=tr("alarmMemo");
+  const memoInp=document.createElement("input"); memoInp.className="panel-inp"; memoInp.placeholder=tr("alarmMemoPh"); memoInp.value=t.alarmMemo||"";
   memoInp.addEventListener("input",function(){ t.alarmMemo=this.value; });
   alarmField.appendChild(memoLbl); alarmField.appendChild(memoInp); alarmBody.appendChild(alarmField);
-  if(t.timeVal||(t.alarmVal&&t.alarmVal!=="none")){ alarmBody.style.display="block"; alarmChevron.style.transform="rotate(90deg)"; alarmToggleTxt.textContent="시간 및 알림 설정 접기"; }
+  if(t.timeVal||(t.alarmVal&&t.alarmVal!=="none")){ alarmBody.style.display="block"; alarmChevron.style.transform="rotate(90deg)"; alarmToggleTxt.textContent=tr("alarmClose"); }
   alarmToggleRow.addEventListener("click",function(){
     const open=alarmBody.style.display!=="none";
     alarmBody.style.display=open?"none":"block";
@@ -642,13 +876,13 @@ function buildPanel(idx) {
   const btns=document.createElement("div"); btns.className="panel-btns"; btns.style.marginTop="0";
   if(idx>=0){
     const delBtn=document.createElement("button"); delBtn.className="pbtn del";
-    delBtn.innerHTML='<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg> 삭제';
+    delBtn.innerHTML='<svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg> '+tr('del');
     delBtn.addEventListener("click",function(){ todos.splice(idx,1); editingIdx=null; saveTodos(); buildList(); renderCalendar(); });
     btns.appendChild(delBtn);
   }
-  const cancelBtn=document.createElement("button"); cancelBtn.className="pbtn"; cancelBtn.textContent="취소";
+  const cancelBtn=document.createElement("button"); cancelBtn.className="pbtn"; cancelBtn.textContent=tr("cancel");
   cancelBtn.addEventListener("click",function(){ editingIdx=null; buildList(); });
-  const saveBtn=document.createElement("button"); saveBtn.className="pbtn save"; saveBtn.textContent="저장";
+  const saveBtn=document.createElement("button"); saveBtn.className="pbtn save"; saveBtn.textContent=tr("save");
   saveBtn.addEventListener("click",function(){
     const name=nameInp.value.trim(); if(!name){nameInp.focus();return;}
     t.name=name;
@@ -718,13 +952,15 @@ function getTasksForDate(yr, mo, dy) {
 function buildYearSel() {
   const sel=document.getElementById("yearSel"); sel.innerHTML="";
   for (let y=MIN_YEAR;y<=MAX_YEAR;y++) {
-    const opt=document.createElement("option"); opt.value=y; opt.textContent=y+"년";
+    const opt=document.createElement("option"); opt.value=y;
+    opt.textContent = lang==="en" ? y : y+"년";
     if (y===curYear) opt.selected=true; sel.appendChild(opt);
   }
 }
 function buildMonthSel() {
   const sel=document.getElementById("monthSel"); sel.innerHTML="";
-  MONTHS_KO.forEach(function(m,i) {
+  const months = lang==="en" ? MONTHS_EN : MONTHS_KO;
+  months.forEach(function(m,i) {
     const opt=document.createElement("option"); opt.value=i+1; opt.textContent=m;
     if (i+1===curMonth) opt.selected=true; sel.appendChild(opt);
   });
@@ -743,13 +979,8 @@ document.getElementById("todayBtn").addEventListener("click",function(){
   curYear=TODAY.getFullYear();curMonth=TODAY.getMonth()+1;buildYearSel();buildMonthSel();renderCalendar();
 });
 
-// ── 탭 ──
-document.getElementById("tabView").addEventListener("click",function(){
-  curTab="view";this.className="tab active";document.getElementById("tabEdit").className="tab";renderCalendar();
-});
-document.getElementById("tabEdit").addEventListener("click",function(){
-  curTab="edit";this.className="tab active";document.getElementById("tabView").className="tab";renderCalendar();
-});
+// ── 탭 (보기 고정) ──
+const curTab = "view";
 
 // ── 캘린더 렌더 ──
 function renderCalendar() {
@@ -758,7 +989,7 @@ function renderCalendar() {
   const daysInM=new Date(curYear,curMonth,0).getDate();
   const cal=document.createElement("table"); cal.className="cal";
   const thead=cal.createTHead(); const hr=thead.insertRow();
-  DAYS_KO.forEach(function(d){const th=document.createElement("th");th.textContent=d;hr.appendChild(th);});
+  getDays().forEach(function(d){const th=document.createElement("th");th.textContent=d;hr.appendChild(th);});
   const tbody=cal.createTBody();
   let d=1;
   for (let row=0;row<6;row++) {
@@ -772,7 +1003,10 @@ function renderCalendar() {
         const dnWrap=document.createElement("div"); dnWrap.className="dn-wrap";
         const dn=document.createElement("span");
         dn.className="dn"+(isToday?" today":col===0?" sun":col===6?" sat":"");
-        dn.textContent=d; dnWrap.appendChild(dn); td.appendChild(dnWrap);
+        dn.textContent=d;
+        dn.dataset.action="addByDate"; dn.dataset.day=d;
+        dn.style.cursor="pointer";
+        dnWrap.appendChild(dn); td.appendChild(dnWrap);
         tasks.forEach(function(item) {
           const div=document.createElement("div");
           div.className="task"+(curTab==="edit"?" ed":"")+" "+(item.t.cat==="wish"?"cat-wish":"cat-todo");
@@ -810,26 +1044,19 @@ function renderCalendar() {
     }
     if (d>daysInM) break;
   }
-  const out=document.getElementById("calOut"); out.innerHTML=""; out.appendChild(cal);
+  const out=document.getElementById("calOut"); out.innerHTML="";
 
-  // ── 메모 3단 ──
-  const memoWrap=document.createElement("div");
-  memoWrap.style.cssText="margin-top:12px;border:0.5px solid var(--bl);border-radius:var(--r);overflow:hidden;display:grid;grid-template-columns:1fr 1fr 1fr";
-
+  // ── 목표 2단 (캘린더 위) ──
   function makeMemoCell(labelText, storageKey, placeholder) {
     const cell=document.createElement("div");
     cell.style.cssText="display:flex;flex-direction:column;border-right:0.5px solid var(--bl)";
-    cell.style.borderRight="0.5px solid var(--bl)";
-
     const hd=document.createElement("div");
     hd.style.cssText="padding:6px 10px;background:var(--bg2);font-size:11px;font-weight:500;color:var(--t2);border-bottom:0.5px solid var(--bl);flex-shrink:0";
     hd.textContent=labelText;
-
     const ta=document.createElement("textarea");
-    ta.style.cssText="flex:1;width:100%;min-height:80px;padding:8px 10px;font-size:11px;font-family:inherit;color:var(--t1);background:var(--bg);border:none;resize:vertical;outline:none;line-height:1.6";
+    ta.style.cssText="flex:1;width:100%;min-height:60px;padding:8px 10px;font-size:11px;font-family:inherit;color:var(--t1);background:var(--bg);border:none;resize:vertical;outline:none;line-height:1.6";
     ta.placeholder=placeholder;
     try { ta.value=localStorage.getItem(storageKey)||""; } catch(e){}
-
     let timer=null;
     ta.addEventListener("input",function(){
       clearTimeout(timer);
@@ -838,22 +1065,32 @@ function renderCalendar() {
         try{ if(val) localStorage.setItem(storageKey,val); else localStorage.removeItem(storageKey); }catch(e){}
       },400);
     });
-
     cell.appendChild(hd); cell.appendChild(ta);
     return cell;
   }
 
-  const yearCell  = makeMemoCell("🎯 올해 목표", "memo_year_"+curYear, "올해 이루고 싶은 목표를 적어보세요...");
-  const monthCell = makeMemoCell("📌 "+curMonth+"월 목표", "memo_month_"+curYear+"_"+curMonth, "이번 달 집중할 목표를 적어보세요...");
-  const freeCell  = makeMemoCell("📝 메모", "memo_free_"+curYear+"_"+curMonth, "자유롭게 메모하세요...");
+  const goalWrap=document.createElement("div");
+  goalWrap.style.cssText="margin-bottom:10px;border:0.5px solid var(--bl);border-radius:var(--r);overflow:hidden;display:grid;grid-template-columns:1fr 1fr";
 
-  freeCell.style.borderRight="0.5px solid var(--bl)";
-  monthCell.style.borderRight="0.5px solid var(--bl)";
-  yearCell.style.borderRight="none";
+  const yearCell=makeMemoCell(tr("yearGoal"), "memo_year_"+curYear, tr("yearGoalPh"));
+  const monthGoalLabel=lang==="en" ? tr("monthGoal").replace("%", MONTHS_EN[curMonth-1]) : tr("monthGoal").replace("%", curMonth);
+  const monthCell=makeMemoCell(monthGoalLabel, "memo_month_"+curYear+"_"+curMonth, tr("monthGoalPh"));
 
+  yearCell.style.borderRight="0.5px solid var(--bl)";
+  monthCell.style.borderRight="none";
+  goalWrap.appendChild(yearCell);
+  goalWrap.appendChild(monthCell);
+  out.appendChild(goalWrap);
+
+  // 캘린더
+  out.appendChild(cal);
+
+  // ── 메모 (캘린더 아래) ──
+  const memoWrap=document.createElement("div");
+  memoWrap.style.cssText="margin-top:10px;border:0.5px solid var(--bl);border-radius:var(--r);overflow:hidden";
+  const freeCell=makeMemoCell(tr("memoLabel"), "memo_free_"+curYear+"_"+curMonth, tr("memoPh"));
+  freeCell.style.borderRight="none";
   memoWrap.appendChild(freeCell);
-  memoWrap.appendChild(monthCell);
-  memoWrap.appendChild(yearCell);
   out.appendChild(memoWrap);
 }
 
@@ -961,6 +1198,7 @@ function renderCalendar() {
 document.getElementById("calOut").addEventListener("click",function(e){
   const editEl=e.target.closest("[data-action='editTask']");
   const addEl=e.target.closest("[data-action='addTask']");
+  const dateEl=e.target.closest("[data-action='addByDate']");
   if (editEl) {
     editingIdx=parseInt(editEl.dataset.idx); buildList(); document.getElementById("sbBody").scrollTop=0;
   } else if (addEl) {
@@ -974,6 +1212,8 @@ document.getElementById("calOut").addEventListener("click",function(e){
     const cancelBtn=btns.querySelectorAll("button")[0];
     cancelBtn.addEventListener("click",function(){const w=document.querySelector(".new-panel-wrap");if(w)w.remove();},{once:true});
     wrap.appendChild(panel); container.appendChild(wrap); document.getElementById("sbBody").scrollTop=9999;
+  } else if (dateEl) {
+    showDateAddPopup(parseInt(dateEl.dataset.day));
   }
 });
 
@@ -1100,6 +1340,26 @@ renderCalendar();
       }, {once: true});
     }
   }
+})();
+</script>
+
+<!-- 피드백 버튼 -->
+<div id="feedbackBtn" style="position:fixed;bottom:20px;right:20px;z-index:500;cursor:pointer;width:40px;height:40px;background:#185FA5;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.2)" title="피드백 보내기">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 8.5 6a2.5 2.5 0 0 0 3 0L22 7"/></svg>
+</div>
+<div id="feedbackToast" style="display:none;position:fixed;bottom:68px;right:20px;z-index:500;background:#1a1a1a;color:#fff;font-size:12px;padding:10px 14px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.25);line-height:1.7">
+  개발자에게 피드백 보내기<br>
+  <a href="mailto:jhkim9891@gmail.com" style="color:#7ec8f7;text-decoration:none">jhkim9891@gmail.com</a>
+</div>
+<script>
+(function(){
+  var btn = document.getElementById("feedbackBtn");
+  var toast = document.getElementById("feedbackToast");
+  btn.addEventListener("click", function(e){
+    e.stopPropagation();
+    toast.style.display = toast.style.display==="none" ? "block" : "none";
+  });
+  document.addEventListener("click", function(){ toast.style.display="none"; });
 })();
 </script>
 </body>
