@@ -208,8 +208,8 @@ const MONTHS_KO = ["1월","2월","3월","4월","5월","6월","7월","8월","9월
 const MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAYS_KO = ["일","월","화","수","목","금","토"];
 const DAYS_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const FREQ_TYPES_KO = ["매일","주 N회","월 N회","연 N회","특정 날짜"];
-const FREQ_TYPES_EN = ["Daily","Weekly","Monthly","Yearly","Specific date"];
+const FREQ_TYPES_KO = ["매일","월 N회","특정 날짜"];
+const FREQ_TYPES_EN = ["Daily","Monthly","Specific date"];
 const FREQ_TYPES = FREQ_TYPES_KO;
 
 // ── 언어 ──
@@ -221,10 +221,8 @@ const LANG = {
     name:"루틴 이름", namePh:"예: 건강검진 예약", cat:"구분",
     freq:"주기", freqDesc:{
       "매일":"선택한 월마다 매일 표시돼요",
-      "주 N회":"선택한 월 안에서 매주 N회 표시돼요",
-      "월 N회":"선택한 월마다 N회 표시돼요",
-      "연 N회":"1년에 N회 — 월 선택 없이 자동 분산돼요",
-      "특정 날짜":"지정한 날짜에만 표시돼요 — 월/일 직접 입력"
+            "월 N회":"선택한 월마다 N회 표시돼요",
+            "특정 날짜":"지정한 날짜에만 표시돼요 — 월/일 직접 입력"
     },
     freqTypes:FREQ_TYPES_KO,
     execMonth:"실행 월", everyMonth:"매월",
@@ -232,9 +230,7 @@ const LANG = {
     execTime:"실행 시간", alarmLbl:"알림", alarmMemo:"알림 메모 (선택)", alarmMemoPh:"예: 약 먹기 잊지 말기",
     alarmOpts:["없음","정시","5분 전","10분 전","30분 전"],
     del:"삭제", cancel:"취소", save:"저장",
-    weeksN:"주 몇 회", daysOfWeek:"요일 선택 (선택)", perWeek:"회/주",
     monthsN:"월 몇 회 표시할까요?", perMonth:"회/월", monthNote:"※ 선택한 월의 1일에 표시됩니다",
-    yearN:"1년에 몇 회 하시나요?", perYear:"회/년", yearNote:"※ 캘린더에는 참고용으로 1월 1일에 표시됩니다",
     dateInput:"날짜를 지정해주세요", monthUnit:"월", dayUnit:"일",
     memoLabel:"📝 메모", monthGoal:"📌 %월 목표", yearGoal:"🎯 올해 목표",
     memoPh:"자유롭게 메모하세요...", monthGoalPh:"이번 달 집중할 목표를 적어보세요...", yearGoalPh:"올해 이루고 싶은 목표를 적어보세요...",
@@ -246,10 +242,8 @@ const LANG = {
     name:"Routine Name", namePh:"e.g. Annual checkup", cat:"Category",
     freq:"Frequency", freqDesc:{
       "매일":"Shows every day of the selected months",
-      "주 N회":"Shows N times per week in selected months",
-      "월 N회":"Shows N times per month in selected months",
-      "연 N회":"N times a year — auto distributed, no month needed",
-      "특정 날짜":"Shows only on the specified date"
+            "월 N회":"Shows N times per month in selected months",
+            "특정 날짜":"Shows only on the specified date"
     },
     freqTypes:FREQ_TYPES_EN,
     execMonth:"Active Months", everyMonth:"Every Month",
@@ -257,9 +251,7 @@ const LANG = {
     execTime:"Time", alarmLbl:"Alarm", alarmMemo:"Alarm memo (optional)", alarmMemoPh:"e.g. Don't forget your meds",
     alarmOpts:["None","On time","5 min before","10 min before","30 min before"],
     del:"Delete", cancel:"Cancel", save:"Save",
-    weeksN:"Times per week", daysOfWeek:"Day of week (optional)", perWeek:"x/wk",
     monthsN:"Times per month?", perMonth:"x/mo", monthNote:"※ Shows on the 1st of selected months",
-    yearN:"How many times per year?", perYear:"x/yr", yearNote:"※ Shows on Jan 1st for reference",
     dateInput:"Specify a date", monthUnit:"Mo", dayUnit:"Day",
     memoLabel:"📝 Memo", monthGoal:"📌 %'s Goals", yearGoal:"🎯 Year Goals",
     memoPh:"Free memo...", monthGoalPh:"Goals for this month...", yearGoalPh:"Goals for this year...",
@@ -309,26 +301,20 @@ let curCat = "todo"; // "todo" | "wish"
 function pillClass(t) {
   const f = t.freqType || "";
   if (f==="매일") return "pill-daily";
-  if (f==="주 N회") return "pill-weekly";
   if (f==="특정 날짜") return "pill-specific";
-  if (f==="연 N회" && (t.freqN||1)===1) return "pill-annual";
   return "pill-multi";
 }
 function taskClass(t) {
   const f = t.freqType || "";
   if (f==="매일") return "t-d";
-  if (f==="주 N회") return "t-w";
   if (f==="특정 날짜") return "t-s";
-  if (f==="연 N회" && (t.freqN||1)===1) return "t-a";
   return "t-m";
 }
 function pillLabel(t) {
   const f = t.freqType || "", n = t.freqN || 1;
   const lbl = LANG[lang];
   if (f==="매일") return lbl.freqTypes[0];
-  if (f==="주 N회") { const ds=(t.days||[]).join("·"); return ds?lbl.freqTypes[1].replace("N",n)+" "+ds:lbl.freqTypes[1].replace("N",n); }
   if (f==="월 N회") return lbl.freqTypes[2].replace("N",n);
-  if (f==="연 N회") return lbl.freqTypes[3].replace("N",n);
   if (f==="특정 날짜") return lang==="en"
     ? (MONTHS_EN[(t.specificMonth||1)-1]||"?")+" "+(t.specificDay||"?")
     : (t.specificMonth||"?")+"월 "+(t.specificDay||"?")+"일";
@@ -743,7 +729,7 @@ function buildPanel(idx, initData) {
     btn.textContent=ft;
     btn.addEventListener("click",function(){
       t.freqType=ftKo; if(!t.freqN) t.freqN=1;
-      if(ftKo==="연 N회"||ftKo==="특정 날짜") t.months=[];
+      if(ftKo==="특정 날짜") t.months=[];
       seg.querySelectorAll(".seg-btn").forEach(function(b){b.classList.remove("on");});
       this.classList.add("on");
       freqDesc.textContent=FREQ_DESCS[ftKo]||"";
@@ -759,26 +745,12 @@ function buildPanel(idx, initData) {
     subArea.innerHTML="";
     const f=t.freqType; if(f==="매일") return;
     const sp=document.createElement("div"); sp.className="sub-panel"; sp.style.marginTop="8px";
-    if(f==="주 N회"){
-      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("weeksN"); sp.appendChild(sl);
-      sp.appendChild(makeNumRow(t,"freqN",1,7,tr("perWeek")));
-      const dl=document.createElement("div"); dl.className="sub-label"; dl.style.marginTop="8px"; dl.textContent=tr("daysOfWeek"); sp.appendChild(dl);
-      const dc=document.createElement("div"); dc.className="day-chips";
-      ["일","월","화","수","목","금","토"].forEach(function(d){
-        const c=document.createElement("span");
-        c.className="dchip"+((t.days||[]).includes(d)?" on":""); c.textContent=d;
-        c.addEventListener("click",function(){ if(!t.days) t.days=[]; const i2=t.days.indexOf(d); if(i2>=0) t.days.splice(i2,1); else t.days.push(d); this.classList.toggle("on"); });
-        dc.appendChild(c);
-      });
-      sp.appendChild(dc);
-    } else if(f==="월 N회"){
+    if(f==="월 N회"){
       const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("monthsN"); sp.appendChild(sl);
-      sp.appendChild(makeNumRow(t,"freqN",1,31,tr("perMonth")));
-      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px"; note.textContent=tr("monthNote"); sp.appendChild(note);
-    } else if(f==="연 N회"){
-      const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("yearN"); sp.appendChild(sl);
-      sp.appendChild(makeNumRow(t,"freqN",1,52,tr("perYear")));
-      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px"; note.textContent=tr("yearNote"); sp.appendChild(note);
+      sp.appendChild(makeNumRow(t,"freqN",1,28,tr("perMonth")));
+      const note=document.createElement("div"); note.style.cssText="font-size:10px;color:var(--t3);margin-top:5px";
+      note.textContent=lang==="en"?"※ Dates are evenly spaced (e.g. 5x/mo → 1st, 6th, 11th, 16th, 21st)":"※ 날짜를 균등 간격으로 자동 배치해요 (예: 월 5회 → 1, 6, 11, 16, 21일)";
+      sp.appendChild(note);
     } else if(f==="특정 날짜"){
       const sl=document.createElement("div"); sl.className="sub-label"; sl.textContent=tr("dateInput"); sp.appendChild(sl);
       const dr=document.createElement("div"); dr.className="date-row";
@@ -820,7 +792,7 @@ function buildPanel(idx, initData) {
     });
   }
   secMonth.appendChild(chipWrap);
-  function renderMonthField(){ secMonth.style.display=(t.freqType==="연 N회"||t.freqType==="특정 날짜")?"none":""; }
+  function renderMonthField(){ secMonth.style.display=(t.freqType==="특정 날짜")?"none":""; }
   renderMonthField();
   panel.appendChild(secMonth);
 
@@ -875,9 +847,15 @@ function buildPanel(idx, initData) {
   }
   const cancelBtn=document.createElement("button"); cancelBtn.className="pbtn"; cancelBtn.textContent=tr("cancel");
   cancelBtn.addEventListener("click",function(){ editingIdx=null; buildList(); });
+  // 에러 메시지 엘리먼트
+  const errMsg=document.createElement("div");
+  errMsg.style.cssText="display:none;font-size:11px;color:#a32d2d;background:#fde8e8;border-radius:6px;padding:6px 10px;margin-bottom:6px;text-align:center";
+  secBtns.appendChild(errMsg);
+
   const saveBtn=document.createElement("button"); saveBtn.className="pbtn save"; saveBtn.textContent=tr("save");
   saveBtn.addEventListener("click",function(){
     const name=nameInp.value.trim(); if(!name){nameInp.focus();return;}
+    errMsg.style.display="none";
     t.name=name;
     if(idx===-1) todos.push(t); else todos[idx]=t;
     editingIdx=null; saveTodos(); buildList(); renderCalendar();
@@ -926,14 +904,15 @@ function getTasksForDate(yr, mo, dy) {
     const inM=getMonthList(t).includes(mo);
     const f=t.freqType||"";
     if (f==="매일"&&inM) { tasks.push({t:t,idx:idx}); }
-    else if (f==="주 N회"&&inM) {
-      const days=t.days||[];
-      if (days.length===0) { if (dow===1||dow===4) tasks.push({t:t,idx:idx}); }
-      else { const dayNames=["일","월","화","수","목","금","토"]; if (days.includes(dayNames[dow])) tasks.push({t:t,idx:idx}); }
-    } else if (f==="월 N회"&&inM) {
-      if (dy===1) tasks.push({t:t,idx:idx});
-    } else if (f==="연 N회"&&inM&&dy===1) {
-      tasks.push({t:t,idx:idx});
+    else if (f==="월 N회"&&inM) {
+      // 균등 간격 날짜 계산: 1일부터 시작해서 (daysInMonth / freqN) 간격
+      var n = t.freqN||1;
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var interval = Math.floor(daysInMonth / n);
+      for (var i=0; i<n; i++) {
+        var targetDay = 1 + i * interval;
+        if (targetDay === dy) { tasks.push({t:t,idx:idx}); break; }
+      }
     } else if (f==="특정 날짜") {
       if ((t.specificMonth||0)===mo&&(t.specificDay||0)===dy) tasks.push({t:t,idx:idx});
     }
