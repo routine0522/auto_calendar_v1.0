@@ -981,7 +981,7 @@ function renderCalendar() {
         dnWrap.appendChild(dn); td.appendChild(dnWrap);
         tasks.forEach(function(item) {
           const div=document.createElement("div");
-          div.className="task"+(curTab==="edit"?" ed":"")+" "+(item.t.cat==="wish"?"cat-wish":"cat-todo");
+          div.className="task "+(item.t.cat==="wish"?"cat-wish":"cat-todo");
           // 특정 날짜 항목만 드래그 가능
           if (item.t.freqType==="특정 날짜") {
             div.draggable=true;
@@ -998,19 +998,11 @@ function renderCalendar() {
           if (item.t.alarmVal&&item.t.alarmVal!=="none") {
             const bs=document.createElement("span"); bs.className="task-bell"; bs.innerHTML='<svg class="ic" viewBox="0 0 24 24"><path d="M10 5a2 2 0 1 1 4 0 7 7 0 0 1 4 6v3l2 2H4l2-2v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>'; div.appendChild(bs);
           }
-          if (curTab==="edit") {
-            div.dataset.action="editTask"; div.dataset.idx=item.idx;
-            const ic=document.createElement("span"); ic.className="task-edit-ic"; ic.innerHTML='<svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4l10.5-10.5a2.828 2.828 0 1 0-4-4L4 16v4z"/></svg>'; div.appendChild(ic);
-          }
           td.appendChild(div);
         });
 
         // 날짜 셀에 드래그 데이터 저장
         td.dataset.day = d;
-        if (curTab==="edit") {
-          const addBtn=document.createElement("button"); addBtn.className="cal-add-btn"; addBtn.dataset.action="addTask"; addBtn.dataset.day=d;
-          addBtn.innerHTML='<svg class="ic" style="font-size:9px" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> 추가'; td.appendChild(addBtn);
-        }
         d++;
       }
     }
@@ -1168,23 +1160,8 @@ function renderCalendar() {
   }, {passive:true});
 })();
 document.getElementById("calOut").addEventListener("click",function(e){
-  const editEl=e.target.closest("[data-action='editTask']");
-  const addEl=e.target.closest("[data-action='addTask']");
   const dateEl=e.target.closest("[data-action='addByDate']");
-  if (editEl) {
-    editingIdx=parseInt(editEl.dataset.idx); buildList(); document.getElementById("sbBody").scrollTop=0;
-  } else if (addEl) {
-    const day=parseInt(addEl.dataset.day); editingIdx=null;
-    const container=document.getElementById("rtList");
-    const existing=container.querySelector(".new-panel-wrap"); if(existing) existing.remove();
-    const wrap=document.createElement("div"); wrap.className="rt-row new-panel-wrap";
-    const t={name:"",freqType:"특정 날짜",freqN:1,months:[],days:[],specificMonth:curMonth,specificDay:day};
-    const panel=buildPanel(-1);
-    const btns=panel.querySelector(".panel-btns");
-    const cancelBtn=btns.querySelectorAll("button")[0];
-    cancelBtn.addEventListener("click",function(){const w=document.querySelector(".new-panel-wrap");if(w)w.remove();},{once:true});
-    wrap.appendChild(panel); container.appendChild(wrap); document.getElementById("sbBody").scrollTop=9999;
-  } else if (dateEl) {
+  if (dateEl) {
     showDateAddPopup(parseInt(dateEl.dataset.day));
   }
 });
