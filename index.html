@@ -845,6 +845,12 @@ function renderCalendar() {
         tasks.forEach(function(item) {
           const div=document.createElement("div");
           div.className="task"+(curTab==="edit"?" ed":"")+" "+(item.t.cat==="wish"?"cat-wish":"cat-todo");
+          // 특정 날짜 항목만 드래그 가능
+          if (item.t.freqType==="특정 날짜") {
+            div.draggable=true;
+            div.dataset.taskIdx=item.idx;
+            div.style.cursor="grab";
+          }
           // 시간 (앞에 표시)
           if (item.t.timeVal) {
             const ts=document.createElement("span"); ts.className="task-time"; ts.textContent=item.t.timeVal; div.appendChild(ts);
@@ -861,6 +867,9 @@ function renderCalendar() {
           }
           td.appendChild(div);
         });
+
+        // 날짜 셀에 드래그 데이터 저장
+        td.dataset.day = d;
         if (curTab==="edit") {
           const addBtn=document.createElement("button"); addBtn.className="cal-add-btn"; addBtn.dataset.action="addTask"; addBtn.dataset.day=d;
           addBtn.innerHTML='<svg class="ic" style="font-size:9px" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> 추가'; td.appendChild(addBtn);
@@ -917,7 +926,107 @@ function renderCalendar() {
   out.appendChild(memoWrap);
 }
 
-// ── 캘린더 편집 이벤트 ──
+// ── 캘린더 항목 드래그 이동 ──
+(function(){
+  var calOut = document.getElementById("calOut");
+  var dragIdx = null;
+  var overTd = null;
+
+  // 드래그 오버 중인 셀 하이라이트
+  function highlightTd(td, on) {
+    if (!td||!td.dataset.day) return;
+    td.style.background = on ? "var(--bb)" : "";
+  }
+
+  // 마우스 드래그
+  calOut.addEventListener("dragstart", function(e) {
+    var task = e.target.closest("[data-task-idx]");
+    if (!task) return;
+    dragIdx = parseInt(task.dataset.taskIdx);
+    e.dataTransfer.effectAllowed = "move";
+    setTimeout(function(){ task.style.opacity="0.4"; }, 0);
+  });
+  calOut.addEventListener("dragover", function(e) {
+    var td = e.target.closest("td[data-day]");
+    if (!td) return;
+    e.preventDefault();
+    if (overTd !== td) { highlightTd(overTd, false); overTd=td; highlightTd(td, true); }
+  });
+  calOut.addEventListener("dragleave", function(e) {
+    var td = e.target.closest("td[data-day]");
+    if (td && !td.contains(e.relatedTarget)) { highlightTd(td, false); if(overTd===td) overTd=null; }
+  });
+  calOut.addEventListener("dragend", function(e) {
+    var task = e.target.closest("[data-task-idx]");
+    if (task) task.style.opacity="";
+    highlightTd(overTd, false); overTd=null;
+  });
+  calOut.addEventListener("drop", function(e) {
+    e.preventDefault();
+    var td = e.target.closest("td[data-day]");
+    if (!td||dragIdx===null) return;
+    var newDay = parseInt(td.dataset.day);
+    todos[dragIdx].specificDay = newDay;
+    todos[dragIdx].specificMonth = curMonth;
+    saveTodos(); renderCalendar(); buildList();
+    dragIdx=null; highlightTd(td,false);
+  });
+
+  // 터치 (꾹 누르기)
+  var touchIdx=null, touchClone=null, touchTimer=null;
+  var touchOffX=0, touchOffY=0;
+
+  calOut.addEventListener("touchstart", function(e) {
+    var task = e.target.closest("[data-task-idx]");
+    if (!task) return;
+    var touch = e.touches[0];
+    touchTimer = setTimeout(function(){
+      touchIdx = parseInt(task.dataset.taskIdx);
+      var rect = task.getBoundingClientRect();
+      touchOffX = touch.clientX - rect.left;
+      touchOffY = touch.clientY - rect.top;
+      touchClone = task.cloneNode(true);
+      touchClone.style.cssText="position:fixed;left:"+rect.left+"px;top:"+rect.top+"px;width:"+rect.width+"px;z-index:9999;pointer-events:none;opacity:0.85;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,0.2)";
+      document.body.appendChild(touchClone);
+      task.style.opacity="0.3";
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 450);
+  }, {passive:true});
+
+  calOut.addEventListener("touchmove", function(e) {
+    clearTimeout(touchTimer);
+    if (touchIdx===null) return;
+    e.preventDefault();
+    var touch = e.touches[0];
+    touchClone.style.left = (touch.clientX - touchOffX)+"px";
+    touchClone.style.top  = (touch.clientY - touchOffY)+"px";
+    touchClone.style.display="none";
+    var el = document.elementFromPoint(touch.clientX, touch.clientY);
+    touchClone.style.display="";
+    var td = el ? el.closest("td[data-day]") : null;
+    if (td !== overTd) { highlightTd(overTd,false); overTd=td; highlightTd(td,true); }
+  }, {passive:false});
+
+  calOut.addEventListener("touchend", function(e) {
+    clearTimeout(touchTimer);
+    if (touchIdx===null) return;
+    if (touchClone) { touchClone.remove(); touchClone=null; }
+    // 원래 항목 투명도 복구
+    calOut.querySelectorAll("[data-task-idx='"+touchIdx+"']").forEach(function(el){ el.style.opacity=""; });
+    if (overTd && overTd.dataset.day) {
+      todos[touchIdx].specificDay = parseInt(overTd.dataset.day);
+      todos[touchIdx].specificMonth = curMonth;
+      saveTodos(); renderCalendar(); buildList();
+    }
+    highlightTd(overTd,false); overTd=null; touchIdx=null;
+  }, {passive:true});
+
+  calOut.addEventListener("touchcancel", function(){
+    clearTimeout(touchTimer);
+    if (touchClone) { touchClone.remove(); touchClone=null; }
+    highlightTd(overTd,false); overTd=null; touchIdx=null;
+  }, {passive:true});
+})();
 document.getElementById("calOut").addEventListener("click",function(e){
   const editEl=e.target.closest("[data-action='editTask']");
   const addEl=e.target.closest("[data-action='addTask']");
