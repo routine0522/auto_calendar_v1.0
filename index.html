@@ -136,11 +136,10 @@ button:hover{background:var(--bg2)}
 /* 모바일 */
 @media(max-width:768px){
   html,body{width:100%;overflow-x:hidden}
-  .app{flex-direction:row;height:100dvh;width:100vw;overflow:hidden}
-  .sb{width:60vw !important;max-width:260px !important;min-width:unset !important;border-right:0.5px solid var(--bl);flex-shrink:0;overflow-y:auto}
-  .resizer{display:flex;width:20px}
-  .resizer::after{width:5px;height:48px}
-  .main{flex:1;padding:6px 6px;overflow-y:auto;overflow-x:hidden;min-width:0;min-height:0}
+  .app{flex-direction:row;height:100dvh;width:100vw;overflow:hidden;position:relative}
+  .sb{position:fixed;top:0;left:0;height:100dvh;width:75vw !important;max-width:300px !important;min-width:unset !important;z-index:300;box-shadow:4px 0 20px rgba(0,0,0,0.2);border-right:0.5px solid var(--bl);overflow-y:auto}
+  .resizer{display:none !important}
+  .main{flex:1;width:100%;padding:6px 6px;overflow-y:auto;overflow-x:hidden;min-width:0;min-height:0}
   .top-bar{gap:3px}
   .top-bar select{font-size:11px;padding:2px 3px;max-width:72px}
   .cal td{height:58px;padding:2px}
@@ -148,10 +147,11 @@ button:hover{background:var(--bg2)}
   .task{font-size:9px;padding:1px 2px}
   .task-time{font-size:8px}
   .dn{width:16px;height:16px;font-size:10px}
-  .tab{font-size:11px;padding:5px 10px}
   button{font-size:11px;padding:4px 7px}
   #sbToggleBtn{font-size:10px;padding:4px 7px}
 }
+/* 모바일 오버레이 배경 */
+#sbOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:299}
 /* 인쇄 */
 .print-header{display:none}
 @media print{
@@ -171,10 +171,11 @@ button:hover{background:var(--bg2)}
 <body>
 <div class="app">
 
+<div id="sbOverlay"></div>
 <div class="sb" id="sb">
-  <div class="sb-hd" id="sbHd">
-    <span style="flex:1;text-align:center"> 루틴 목록</span>
-    <svg class="ic" id="sbIcon" style="font-size:13px;color:var(--t2);transition:transform 0.2s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+  <div class="sb-hd" id="sbHd" style="cursor:default">
+    <span style="flex:1;text-align:center;font-size:12px;font-weight:500"> 루틴 목록</span>
+    <button onclick="toggleSidebar()" style="border:none;background:#e0e0e0;color:#333;border-radius:6px;width:28px;height:28px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600" title="닫기">✕</button>
   </div>
   <div class="sb-body" id="sbBody">
     <div style="display:flex;border-bottom:0.5px solid var(--bl);margin-bottom:6px">
@@ -497,14 +498,25 @@ document.getElementById("tabWish").addEventListener("click", function(){ setTab(
 let sbOpen = false; // 디폴트: 닫힘
 document.getElementById("sb").style.display = "none";
 document.getElementById("resizer").style.display = "none";
+document.getElementById("sbOverlay").style.display = "none";
 
 function toggleSidebar() {
   sbOpen = !sbOpen;
   const sb = document.getElementById("sb");
   const resizer = document.getElementById("resizer");
+  const overlay = document.getElementById("sbOverlay");
   const isMobile = window.innerWidth <= 768;
+
   sb.style.display = sbOpen ? "" : "none";
-  resizer.style.display = sbOpen ? "" : "none";
+  resizer.style.display = (sbOpen && !isMobile) ? "" : "none";
+
+  // 모바일: 오버레이 배경 처리
+  if (isMobile) {
+    overlay.style.display = sbOpen ? "block" : "none";
+  } else {
+    overlay.style.display = "none";
+  }
+
   const lbl = document.getElementById("sbToggleLbl");
   lbl.textContent = sbOpen
     ? (lang==="en" ? "Close List" : "목록 닫기")
@@ -515,12 +527,12 @@ function toggleSidebar() {
   btn.style.borderColor = "transparent";
 }
 
-document.getElementById("sbToggleBtn").addEventListener("click", toggleSidebar);
-
-// 기존 사이드바 헤더 클릭은 닫기만
-document.getElementById("sbHd").addEventListener("click", function() {
-  toggleSidebar();
+// 오버레이 클릭시 사이드바 닫기
+document.getElementById("sbOverlay").addEventListener("click", function(){
+  if(sbOpen) toggleSidebar();
 });
+
+document.getElementById("sbToggleBtn").addEventListener("click", toggleSidebar);
 
 // ── 루틴 목록 렌더 ──
 function buildList() {
@@ -1055,7 +1067,7 @@ function renderCalendar() {
     hd.style.cssText="padding:6px 10px;background:var(--bg2);font-size:11px;font-weight:500;color:var(--t2);border-bottom:0.5px solid var(--bl);flex-shrink:0";
     hd.textContent=labelText;
     const ta=document.createElement("textarea");
-    ta.style.cssText="flex:1;width:100%;min-height:60px;padding:8px 10px;font-size:11px;font-family:inherit;color:var(--t1);background:var(--bg);border:none;resize:vertical;outline:none;line-height:1.6";
+    ta.style.cssText="flex:1;width:100%;min-height:90px;padding:8px 10px;font-size:11px;font-family:inherit;color:var(--t1);background:var(--bg);border:none;resize:vertical;outline:none;line-height:1.6";
     ta.placeholder=placeholder;
     try { ta.value=localStorage.getItem(storageKey)||""; } catch(e){}
     let timer=null;
