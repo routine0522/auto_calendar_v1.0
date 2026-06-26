@@ -178,10 +178,6 @@ button:hover{background:var(--bg2)}
     <button onclick="toggleSidebar()" style="border:none;background:#e0e0e0;color:#333;border-radius:6px;width:28px;height:28px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600" title="닫기">✕</button>
   </div>
   <div class="sb-body" id="sbBody">
-    <div style="display:flex;border-bottom:0.5px solid var(--bl);margin-bottom:6px">
-      <button id="tabTodo" style="flex:1;border:none;border-radius:0;background:none;padding:6px 4px;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--bb2);color:var(--bb2)">TO DO</button>
-      <button id="tabWish" style="flex:1;border:none;border-radius:0;background:none;padding:6px 4px;font-size:11px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--t3)">WISH</button>
-    </div>
     <div id="rtList"></div>
     <button class="add-rt-btn" id="addRtBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> 루틴 추가</button>
   </div>
@@ -459,8 +455,6 @@ function applyLang() {
   // 사이드바
   document.querySelector("#sbHd span").textContent = " "+tr("routineList");
   document.getElementById("addRtBtn").childNodes[1].textContent = " "+tr("addRoutine");
-  document.getElementById("tabTodo").textContent = tr("todo");
-  document.getElementById("tabWish").textContent = tr("wish");
   // 목록 토글 버튼
   const lbl = document.getElementById("sbToggleLbl");
   lbl.textContent = sbOpen
@@ -479,20 +473,6 @@ document.getElementById("langBtn").addEventListener("click", function(){
   this.textContent = lang==="ko" ? "EN" : "KO";
   applyLang();
 });
-
-// ── TO DO / WISH 탭 (추가 시 구분용) ──
-function setTab(cat) {
-  curCat = cat; editingIdx = null;
-  const todo = document.getElementById("tabTodo");
-  const wish = document.getElementById("tabWish");
-  const onStyle = "flex:1;border:none;border-radius:0;background:none;padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--bb2);color:var(--bb2)";
-  const offStyle = "flex:1;border:none;border-radius:0;background:none;padding:6px 4px;font-size:11px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--t3)";
-  todo.style.cssText = cat==="todo" ? onStyle : offStyle;
-  wish.style.cssText = cat==="wish" ? onStyle : offStyle;
-  buildList();
-}
-document.getElementById("tabTodo").addEventListener("click", function(){ setTab("todo"); });
-document.getElementById("tabWish").addEventListener("click", function(){ setTab("wish"); });
 
 // ── 사이드바 열기/닫기 ──
 let sbOpen = false; // 디폴트: 닫힘
