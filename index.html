@@ -738,22 +738,46 @@ function openDatePopup(day){
   // 이벤트 추가 폼
   const addHd=document.createElement("div");addHd.className="popup-add-hd";
   addHd.textContent=lang==="en"?"Add Event":"이벤트 추가";
-  const inp=document.createElement("input");inp.className="panel-inp";inp.placeholder=tr("namePh");inp.style.marginBottom="8px";
-  inp.id="popupNewEventInp";
-  body.appendChild(addHd);body.appendChild(inp);
+  body.appendChild(addHd);
+
+  // 추가된 이벤트 목록 표시 영역
+  const addedList=document.createElement("div");addedList.id="popupAddedList";
+  body.appendChild(addedList);
+
+  // 입력 행
+  function makeAddRow(){
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;gap:5px;align-items:center;margin-bottom:6px";
+    const inp=document.createElement("input");inp.className="panel-inp";inp.placeholder=tr("namePh");
+    inp.style.cssText="flex:1;min-width:0";
+    const addB=document.createElement("button");addB.className="pbtn save";
+    addB.style.cssText="flex-shrink:0;padding:4px 10px;font-size:11px";
+    addB.textContent="+";
+    addB.onclick=function(){
+      const name=inp.value.trim();
+      if(!name){inp.focus();return;}
+      todos.push({name,freqType:"특정 날짜",specificMonth:curMonth,specificDay:day,cat:"event",starred:false,months:[]});
+      saveTodos();renderCal();buildList();
+      // 추가된 항목 표시
+      const tag=document.createElement("div");
+      tag.style.cssText="display:flex;align-items:center;gap:4px;padding:3px 8px;background:var(--bg2);border-radius:6px;margin-bottom:4px;font-size:11px;color:var(--t1);border-left:3px solid #993556";
+      tag.textContent="✓ "+name;
+      addedList.appendChild(tag);
+      inp.value="";
+      inp.focus();
+    };
+    inp.addEventListener("keydown",function(e){if(e.key==="Enter")addB.click();});
+    row.appendChild(inp);row.appendChild(addB);
+    body.appendChild(row);
+    inp.focus();
+  }
+  makeAddRow();
 
   // 헤더 확인 버튼
   const hdrBtn=document.getElementById("popupConfirmBtn");
   if(hdrBtn){
     hdrBtn.textContent=lang==="en"?"Confirm":"확인";
     hdrBtn.onclick=function(){
-      const newInp=document.getElementById("popupNewEventInp");
-      if(newInp){
-        const name=newInp.value.trim();
-        if(name){
-          todos.push({name,freqType:"특정 날짜",specificMonth:curMonth,specificDay:day,cat:"event",starred:false,months:[]});
-        }
-      }
       saveTodos();renderCal();buildList();
       closePopup();
     };
