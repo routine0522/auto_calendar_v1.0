@@ -60,6 +60,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .pill-daily{background:var(--bb);color:var(--bt)}
 .pill-multi{background:var(--pb);color:var(--pt)}
 .pill-specific{background:var(--ab);color:var(--at)}
+.pill-weekday{background:#EAF3DE;color:#3B6D11}
 .rt-btn{border:none;background:none;cursor:pointer;padding:2px 3px;font-size:12px;color:var(--t3);flex-shrink:0}
 .rt-btn:hover{color:var(--bb2)}
 .rt-btn.del:hover{color:#a32d2d}
@@ -90,7 +91,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 .mchip{font-size:10px;padding:2px 6px;border:0.5px solid var(--bm);border-radius:20px;cursor:pointer;background:var(--bg);color:var(--t2);user-select:none}
 .mchip.on{background:var(--bb);color:var(--bt);border-color:var(--bb2);font-weight:500}
 .mchip.every{background:var(--pb);color:var(--pt);border-color:#534AB7;font-weight:500}
-.sub-panel{background:var(--bg);border:0.5px solid var(--bl);border-radius:var(--r);padding:8px;margin-bottom:6px}
+.sub-panel{background:var(--bg);border:0.5px solid var(--bl);border-radius:var(--r);padding:8px;margin-bottom:6px;overflow:hidden;box-sizing:border-box}
 .num-row{display:flex;align-items:center;gap:6px}
 .nbtn{width:22px;height:22px;border:0.5px solid var(--bm);border-radius:var(--r);background:var(--bg);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t1);flex-shrink:0}
 .nval{font-size:12px;font-weight:500;min-width:18px;text-align:center}
@@ -304,9 +305,12 @@ function sDel(k){if(_s){try{_s.removeItem(k);}catch(e){}}else delete _m[k];}
 
 // ── 데이터 ──
 let todos=[];
+let dayOrder={}; // { "yr-mo-dy": [todoIdx, todoIdx, ...] }
 function saveTodos(){try{sSet("todos",JSON.stringify(todos));}catch(e){}}
+function saveDayOrder(){try{sSet("dayOrder",JSON.stringify(dayOrder));}catch(e){}}
 function loadTodos(){
   try{const r=sGet("todos");if(r)todos=JSON.parse(r);}catch(e){todos=[];}
+  try{const r2=sGet("dayOrder");if(r2)dayOrder=JSON.parse(r2);}catch(e){dayOrder={};}
   // 마이그레이션
   todos.forEach(function(t){
     if(t.cat==="todo"||t.cat==="routine")t.cat="routine";
@@ -315,6 +319,36 @@ function loadTodos(){
   });
 }
 loadTodos();
+
+function dayKey(yr,mo,dy){return yr+"-"+mo+"-"+dy;}
+
+// 같은 날짜의 항목들을 dayOrder 기준으로 정렬 (순서 미지정 항목은 기존 순서 유지하며 뒤에 배치)
+function sortTasksByDayOrder(tasks,yr,mo,dy){
+  const key=dayKey(yr,mo,dy);
+  const order=dayOrder[key];
+  if(!order||order.length===0)return tasks;
+  const orderMap={};
+  order.forEach(function(idx,pos){orderMap[idx]=pos;});
+  return tasks.slice().sort(function(a,b){
+    const pa=orderMap.hasOwnProperty(a.idx)?orderMap[a.idx]:999999;
+    const pb=orderMap.hasOwnProperty(b.idx)?orderMap[b.idx]:999999;
+    return pa-pb;
+  });
+}
+
+// 특정 날짜에서 항목 순서를 한 칸 위/아래로 이동
+function moveTaskInDay(yr,mo,dy,taskIdx,direction){
+  const key=dayKey(yr,mo,dy);
+  const tasks=sortTasksByDayOrder(getTasksForDate(yr,mo,dy),yr,mo,dy);
+  const idxList=tasks.map(function(item){return item.idx;});
+  const pos=idxList.indexOf(taskIdx);
+  if(pos<0)return;
+  const newPos=pos+direction;
+  if(newPos<0||newPos>=idxList.length)return;
+  const tmp=idxList[pos];idxList[pos]=idxList[newPos];idxList[newPos]=tmp;
+  dayOrder[key]=idxList;
+  saveDayOrder();
+}
 
 let curYear=BASE_YEAR, curMonth=TODAY.getMonth()+1;
 let editingIdx=null, sbOpen=false, sbCat="routine", starFilterOn=false;
@@ -334,11 +368,16 @@ function getMonthlyDays(t,mo,yr){
 
 function getTasksForDate(yr,mo,dy){
   const tasks=[];
+  const dow=new Date(yr,mo-1,dy).getDay();
   todos.forEach(function(t,idx){
     const months=(!t.months||t.months.length===0)?[1,2,3,4,5,6,7,8,9,10,11,12]:t.months;
     const inM=months.includes(mo);
     const f=t.freqType||"매일";
     if(f==="매일"&&inM){tasks.push({t,idx});}
+    else if(f==="요일 선택"&&inM){
+      const wd=t.weekdays||[];
+      if(wd.includes(dow))tasks.push({t,idx});
+    }
     else if(f==="월 N회"&&inM){
       const ds=getMonthlyDays(t,mo,yr);
       if(ds.indexOf(dy)>=0)tasks.push({t,idx,monthDay:dy});
@@ -347,7 +386,7 @@ function getTasksForDate(yr,mo,dy){
       if((t.specificMonth||0)===mo&&(t.specificDay||0)===dy)tasks.push({t,idx});
     }
   });
-  return tasks;
+  return sortTasksByDayOrder(tasks,yr,mo,dy);
 }
 
 // ── 사이드바 ──
@@ -464,12 +503,24 @@ function getPillClass(t){
   const f=t.freqType||"매일";
   if(f==="매일")return"pill-daily";
   if(f==="특정 날짜")return"pill-specific";
+  if(f==="요일 선택")return"pill-weekday";
   return"pill-multi";
 }
+const WD_SHORT_KO=["일","월","화","수","목","금","토"];
+const WD_SHORT_EN=["Su","Mo","Tu","We","Th","Fr","Sa"];
 function getPillLabel(t){
   const f=t.freqType||"매일",n=t.freqN||1;
   if(f==="매일")return lang==="en"?"Daily":"매일";
   if(f==="월 N회")return lang==="en"?n+"x/mo":"월 "+n+"회";
+  if(f==="요일 선택"){
+    const wd=(t.weekdays||[]).slice().sort();
+    if(wd.length===0)return lang==="en"?"No days":"요일 미지정";
+    if(wd.length===7)return lang==="en"?"Every day":"매일";
+    if(wd.length===5&&[1,2,3,4,5].every(function(d){return wd.includes(d);}))return lang==="en"?"Weekdays":"평일";
+    if(wd.length===2&&[0,6].every(function(d){return wd.includes(d);}))return lang==="en"?"Weekends":"주말";
+    const names=lang==="en"?WD_SHORT_EN:WD_SHORT_KO;
+    return wd.map(function(d){return names[d];}).join("·");
+  }
   if(f==="특정 날짜"){
     return lang==="en"?(MONTHS_EN[(t.specificMonth||1)-1]||"?")+" "+(t.specificDay||"?"):(t.specificMonth||"?")+"월 "+(t.specificDay||"?")+"일";
   }
@@ -479,6 +530,7 @@ function getPillLabel(t){
 // ── 편집 패널 ──
 function buildEditPanel(idx){
   const t=JSON.parse(JSON.stringify(todos[idx]));
+  if(t.freqType==="매일"){t.freqType="요일 선택";t.weekdays=[0,1,2,3,4,5,6];}
   const isEvent=(t.cat||"routine")==="event";
   const panel=document.createElement("div");panel.className="edit-panel";
 
@@ -494,8 +546,8 @@ function buildEditPanel(idx){
     const fLbl=document.createElement("span");fLbl.className="panel-label";fLbl.textContent=tr("freq");
     panel.appendChild(fLbl);
     const seg=document.createElement("div");seg.className="seg";
-    const freqs=["매일","월 N회"];
-    const freqLabels=lang==="en"?["Daily","Monthly N"]:["매일","월 N회"];
+    const freqs=["요일 선택","월 N회"];
+    const freqLabels=lang==="en"?["Weekdays","Monthly N"]:["요일 선택","월 N회"];
     freqs.forEach(function(fv,fi){
       const b=document.createElement("button");b.className="seg-btn"+(t.freqType===fv?" on":"");
       b.textContent=freqLabels[fi];
@@ -514,6 +566,53 @@ function buildEditPanel(idx){
         const note=document.createElement("div");note.style.cssText="font-size:9px;color:var(--t3);margin-top:4px";
         note.textContent=tr("freqNote");
         sp.appendChild(sl);sp.appendChild(nr);sp.appendChild(note);
+        subArea.appendChild(sp);
+      } else if(t.freqType==="요일 선택"){
+        if(!t.weekdays)t.weekdays=[];
+        const sp=document.createElement("div");sp.className="sub-panel";
+        const sl=document.createElement("div");sl.style.cssText="font-size:10px;color:var(--t2);margin-bottom:6px";
+        sl.textContent=lang==="en"?"Select days":"요일 선택";
+        sp.appendChild(sl);
+
+        const dayWrap=document.createElement("div");dayWrap.style.cssText="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px";
+        const names=lang==="en"?WD_SHORT_EN:WD_SHORT_KO;
+        for(let dIdx=0;dIdx<7;dIdx++){
+          const dch=document.createElement("span");
+          dch.textContent=names[dIdx];
+          dch.dataset.d=dIdx;
+          dch.style.cssText="width:24px;height:24px;border-radius:50%;border:0.5px solid var(--bm);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;flex-shrink:0";
+          function refreshDay(){
+            const on=(t.weekdays||[]).includes(dIdx);
+            dch.style.background=on?"var(--bb)":"var(--bg)";
+            dch.style.color=on?"var(--bt)":"var(--t2)";
+            dch.style.borderColor=on?"var(--bb2)":"var(--bm)";
+            dch.style.fontWeight=on?"600":"400";
+          }
+          dch.onclick=function(){
+            const i2=t.weekdays.indexOf(dIdx);
+            if(i2>=0)t.weekdays.splice(i2,1);else t.weekdays.push(dIdx);
+            refreshDay();
+          };
+          refreshDay();
+          dayWrap.appendChild(dch);
+        }
+        sp.appendChild(dayWrap);
+
+        const shortcutWrap=document.createElement("div");shortcutWrap.style.cssText="display:flex;gap:4px";
+        const wkBtn=document.createElement("span");
+        wkBtn.textContent=lang==="en"?"Weekdays":"평일";
+        wkBtn.className="mchip";
+        wkBtn.onclick=function(){t.weekdays=[1,2,3,4,5];renderSub();};
+        const wkendBtn=document.createElement("span");
+        wkendBtn.textContent=lang==="en"?"Weekends":"주말";
+        wkendBtn.className="mchip";
+        wkendBtn.onclick=function(){t.weekdays=[0,6];renderSub();};
+        const allBtn=document.createElement("span");
+        allBtn.textContent=lang==="en"?"All":"매일";
+        allBtn.className="mchip";
+        allBtn.onclick=function(){t.weekdays=[0,1,2,3,4,5,6];renderSub();};
+        shortcutWrap.appendChild(wkBtn);shortcutWrap.appendChild(wkendBtn);shortcutWrap.appendChild(allBtn);
+        sp.appendChild(shortcutWrap);
         subArea.appendChild(sp);
       }
     }
@@ -625,22 +724,23 @@ document.getElementById("addBtn").addEventListener("click", function(){
     return;
   }
 
-  const newItem={name:"",freqType:"매일",freqN:1,months:[],cat:sbCat,starred:false};
+  const newItem={name:"",freqType:"요일 선택",freqN:1,months:[],weekdays:[0,1,2,3,4,5,6],cat:sbCat,starred:false};
   todos.push(newItem);
   window._tempAddIdx=todos.length-1;
   const tempIdx=window._tempAddIdx;
 
   const panel=buildEditPanel(tempIdx);
 
-  // 저장 버튼
+  // 저장 버튼 — buildEditPanel의 기본 저장 로직(todos[idx]=t, freqType/weekdays/months 전체 반영)을 그대로 사용
   const saveB=panel.querySelector(".pbtn.save");
   if(saveB){
+    const originalSave=saveB.onclick;
     saveB.onclick=function(){
       const nameInp=panel.querySelector(".panel-inp");
       if(!nameInp||!nameInp.value.trim()){if(nameInp)nameInp.focus();return;}
-      todos[tempIdx].name=nameInp.value.trim();
       delete window._tempAddIdx;
-      saveTodos();buildList();renderCal();area.innerHTML="";
+      area.innerHTML="";
+      originalSave.call(saveB);
     };
   }
 
@@ -674,12 +774,42 @@ function openDatePopup(day){
   if(tasks.length>0){
     const hd=document.createElement("div");hd.className="popup-section-hd";hd.textContent=lang==="en"?"Schedules on this day":"이 날의 스케줄";
     body.appendChild(hd);
-    tasks.forEach(function(item){
+    tasks.forEach(function(item,pos){
       const isEvent=item.t.cat==="event";
+      const isFirst=pos===0, isLast=pos===tasks.length-1;
+
+      // 순서 변경 버튼 (위/아래)
+      function makeOrderBtns(){
+        const ob=document.createElement("div");
+        ob.style.cssText="display:flex;flex-direction:column;gap:0;flex-shrink:0";
+        const upB=document.createElement("button");
+        upB.innerHTML="▲";upB.title=lang==="en"?"Move up":"위로";
+        upB.style.cssText="border:none;background:none;cursor:pointer;font-size:9px;line-height:1;padding:1px 4px;color:"+(isFirst?"var(--t3)":"var(--t2)");
+        upB.disabled=isFirst;
+        if(isFirst)upB.style.cursor="default";
+        upB.onclick=function(e){
+          e.stopPropagation();
+          moveTaskInDay(curYear,curMonth,day,item.idx,-1);
+          openDatePopup(day);
+        };
+        const downB=document.createElement("button");
+        downB.innerHTML="▼";downB.title=lang==="en"?"Move down":"아래로";
+        downB.style.cssText="border:none;background:none;cursor:pointer;font-size:9px;line-height:1;padding:1px 4px;color:"+(isLast?"var(--t3)":"var(--t2)");
+        downB.disabled=isLast;
+        if(isLast)downB.style.cursor="default";
+        downB.onclick=function(e){
+          e.stopPropagation();
+          moveTaskInDay(curYear,curMonth,day,item.idx,1);
+          openDatePopup(day);
+        };
+        ob.appendChild(upB);ob.appendChild(downB);
+        return ob;
+      }
 
       if(!isEvent){
         // 루틴: 기존처럼 수정 버튼
         const row=document.createElement("div");row.className="popup-item";
+        row.appendChild(makeOrderBtns());
         const bar=document.createElement("div");bar.className="popup-item-bar";
         bar.style.background="var(--bb2)";
         const nm=document.createElement("div");nm.className="popup-item-name";
@@ -706,6 +836,7 @@ function openDatePopup(day){
         // 이벤트: 한 줄 표시
         const wrap=document.createElement("div");
         wrap.style.cssText="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:var(--bg2);margin-bottom:5px;border-left:3px solid #993556";
+        wrap.appendChild(makeOrderBtns());
 
         const nameInp=document.createElement("input");nameInp.className="panel-inp";
         nameInp.value=item.t.name||"";
